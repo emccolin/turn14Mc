@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- ============================================================
 CREATE TABLE IF NOT EXISTS brands (
     id              SERIAL PRIMARY KEY,
-    turn14_id       INTEGER UNIQUE NOT NULL,
+    turn14_id       VARCHAR(50) UNIQUE NOT NULL,
     name            VARCHAR(255) NOT NULL,
     logo_url        TEXT,
     active          BOOLEAN DEFAULT true,
@@ -23,7 +23,7 @@ CREATE INDEX idx_brands_name ON brands(name);
 -- ============================================================
 CREATE TABLE IF NOT EXISTS categories (
     id              SERIAL PRIMARY KEY,
-    turn14_id       INTEGER UNIQUE NOT NULL,
+    turn14_id       VARCHAR(50) UNIQUE NOT NULL,
     name            VARCHAR(255) NOT NULL,
     parent_id       INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     active          BOOLEAN DEFAULT true,
@@ -40,7 +40,7 @@ CREATE INDEX idx_categories_name ON categories(name);
 -- ============================================================
 CREATE TABLE IF NOT EXISTS products (
     id              SERIAL PRIMARY KEY,
-    turn14_id       INTEGER UNIQUE NOT NULL,
+    turn14_id       VARCHAR(50) UNIQUE NOT NULL,
     brand_id        INTEGER REFERENCES brands(id) ON DELETE SET NULL,
     category_id     INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     part_number     VARCHAR(100),
