@@ -177,10 +177,11 @@ CREATE TABLE IF NOT EXISTS product_fitment (
     model_id        INTEGER NOT NULL REFERENCES vehicle_models(id) ON DELETE CASCADE,
     submodel_id     INTEGER REFERENCES vehicle_submodels(id) ON DELETE SET NULL,
     engine_id       INTEGER REFERENCES vehicle_engines(id) ON DELETE SET NULL,
-    qualifier       TEXT,
-    UNIQUE(product_id, year, make_id, model_id, COALESCE(submodel_id, 0), COALESCE(engine_id, 0))
+    qualifier       TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fitment_unique
+    ON product_fitment(product_id, year, make_id, model_id, COALESCE(submodel_id, 0), COALESCE(engine_id, 0));
 CREATE INDEX idx_fitment_product_id ON product_fitment(product_id);
 CREATE INDEX idx_fitment_year ON product_fitment(year);
 CREATE INDEX idx_fitment_make_id ON product_fitment(make_id);
