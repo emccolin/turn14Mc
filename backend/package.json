@@ -1,0 +1,24 @@
+{
+  "name": "turn14-catalog-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Turn14 auto parts catalog",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "sync:catalog": "node src/jobs/runSync.js catalog",
+    "sync:inventory": "node src/jobs/runSync.js inventory",
+    "sync:pricing": "node src/jobs/runSync.js pricing",
+    "sync:fitment": "node src/jobs/runSync.js fitment",
+    "db:refresh-views": "node src/jobs/runSync.js refresh-views"
+  },
+  "dependencies": {
+    "fastify": "^5.2.1",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/rate-limit": "^10.2.1",
+    "pg": "^8.13.1",
+    "node-cron": "^3.0.3",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0"
+  }
+}
