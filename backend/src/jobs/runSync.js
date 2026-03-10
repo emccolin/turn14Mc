@@ -5,6 +5,7 @@ const command = process.argv[2];
 
 const commands = {
   catalog: syncService.syncCatalog,
+  brands: syncService.syncBrandsOnly,
   inventory: syncService.syncInventory,
   pricing: syncService.syncPricing,
   fitment: syncService.syncFitment,

@@ -470,10 +470,34 @@ async function getOrCreateVehicleEngine(name, attrs = {}) {
   return result.rows[0].id;
 }
 
+async function syncBrandsOnly() {
+  const logId = await createSyncLog('brands');
+  try {
+    console.log('[Sync] Starting brand sync...');
+    const result = await syncBrands(logId);
+    await updateSyncLog(logId, {
+      status: 'completed',
+      items_processed: result.total,
+      items_created: result.created,
+      items_updated: result.updated,
+      finished_at: new Date().toISOString(),
+    });
+    console.log(`[Sync] Brands sync completed. Created: ${result.created}, Updated: ${result.updated}, Total: ${result.total}`);
+  } catch (err) {
+    await updateSyncLog(logId, {
+      status: 'failed',
+      error_message: err.message,
+      finished_at: new Date().toISOString(),
+    });
+    throw err;
+  }
+}
+
 module.exports = {
   syncCatalog,
   syncInventory,
   syncPricing,
   syncFitment,
   syncProductImages,
+  syncBrandsOnly,
 };
