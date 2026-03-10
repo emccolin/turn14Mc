@@ -61,45 +61,62 @@ async function syncBrands(logId) {
   return { created, updated, total: brands.length };
 }
 
-// ─── Category Sync ──────────────────────────────────────────
+// ─── Category Sync (extracted from product data) ────────────
 async function syncCategories(logId) {
-  const response = await turn14.getCategories();
-  const categories = response?.data || response || [];
-  let created = 0, updated = 0;
+  try {
+    const response = await turn14.getCategories();
+    const categories = response?.data || response || [];
+    let created = 0, updated = 0;
 
-  for (const cat of categories) {
-    const t14id = cat.id || cat.attributes?.id;
-    const name = cat.attributes?.name || cat.name || '';
-    const parentT14id = cat.attributes?.parent_id || cat.parent_id || null;
+    for (const cat of categories) {
+      const t14id = cat.id || cat.attributes?.id;
+      const name = cat.attributes?.name || cat.name || '';
+      const parentT14id = cat.attributes?.parent_id || cat.parent_id || null;
 
-    let parentId = null;
-    if (parentT14id) {
-      const parentRow = await db.query('SELECT id FROM categories WHERE turn14_id = $1', [parentT14id]);
-      parentId = parentRow.rows[0]?.id || null;
+      let parentId = null;
+      if (parentT14id) {
+        const parentRow = await db.query('SELECT id FROM categories WHERE turn14_id = $1', [parentT14id]);
+        parentId = parentRow.rows[0]?.id || null;
+      }
+
+      const existing = await db.query('SELECT id FROM categories WHERE turn14_id = $1', [t14id]);
+      if (existing.rows.length > 0) {
+        await db.query(
+          'UPDATE categories SET name = $1, parent_id = $2, updated_at = NOW() WHERE turn14_id = $3',
+          [name, parentId, t14id]
+        );
+        updated++;
+      } else {
+        await db.query(
+          'INSERT INTO categories (turn14_id, name, parent_id) VALUES ($1, $2, $3)',
+          [t14id, name, parentId]
+        );
+        created++;
+      }
     }
 
-    const existing = await db.query('SELECT id FROM categories WHERE turn14_id = $1', [t14id]);
-    if (existing.rows.length > 0) {
-      await db.query(
-        'UPDATE categories SET name = $1, parent_id = $2, updated_at = NOW() WHERE turn14_id = $3',
-        [name, parentId, t14id]
-      );
-      updated++;
-    } else {
-      await db.query(
-        'INSERT INTO categories (turn14_id, name, parent_id) VALUES ($1, $2, $3)',
-        [t14id, name, parentId]
-      );
-      created++;
-    }
+    await updateSyncLog(logId, {
+      items_processed: categories.length,
+      items_created: created,
+      items_updated: updated,
+    });
+    return { created, updated, total: categories.length };
+  } catch (err) {
+    console.warn('[Sync] Category endpoint not available, categories will be created from product data:', err.message);
+    return { created: 0, updated: 0, total: 0 };
   }
+}
 
-  await updateSyncLog(logId, {
-    items_processed: categories.length,
-    items_created: created,
-    items_updated: updated,
-  });
-  return { created, updated, total: categories.length };
+async function getOrCreateCategory(catId, catName) {
+  if (!catId) return null;
+  const existing = await db.query('SELECT id FROM categories WHERE turn14_id = $1', [catId]);
+  if (existing.rows.length > 0) return existing.rows[0].id;
+  if (!catName) catName = `Category ${catId}`;
+  const result = await db.query(
+    'INSERT INTO categories (turn14_id, name) VALUES ($1, $2) ON CONFLICT (turn14_id) DO UPDATE SET name = $2 RETURNING id',
+    [catId, catName]
+  );
+  return result.rows[0].id;
 }
 
 // ─── Product Catalog Sync (by brand, paginated) ────────────
@@ -186,8 +203,8 @@ async function upsertProduct(item, localBrandId) {
   let categoryId = null;
   if (attrs.category?.id || attrs.category_id) {
     const catT14id = attrs.category?.id || attrs.category_id;
-    const catRow = await db.query('SELECT id FROM categories WHERE turn14_id = $1', [catT14id]);
-    categoryId = catRow.rows[0]?.id || null;
+    const catName = attrs.category?.name || attrs.category_name || null;
+    categoryId = await getOrCreateCategory(catT14id, catName);
   }
 
   const existing = await db.query('SELECT id FROM products WHERE turn14_id = $1', [t14id]);
